@@ -38,17 +38,15 @@ type AccessDetails struct {
 	UserID     uint64
 }
 
-var user = User{
-	ID:       1,
-	Username: "username",
-	Password: "password",
-}
-
 var (
 	router = gin.Default()
+	client *redis.Client
+	user   = User{
+		ID:       1,
+		Username: "username",
+		Password: "password",
+	}
 )
-
-var client *redis.Client
 
 func init() {
 	dsn := os.Getenv("REDIS_DSN")
