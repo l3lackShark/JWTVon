@@ -64,7 +64,8 @@ func init() {
 
 func main() {
 	router.POST("/login", Login)
-	router.POST("/todo", CreateTodo)
+	router.POST("/todo", TokenAuthMiddleware(), CreateTodo)
+	router.POST("/logout", TokenAuthMiddleware(), Logout)
 	log.Fatal(router.Run(":8080"))
 
 }
@@ -253,4 +254,43 @@ func CreateTodo(c *gin.Context) {
 
 	// we are only returning the todo to the caller for now
 	c.JSON(http.StatusCreated, td)
+}
+
+// DeleteAuth logs the client out by deleting the token from redis
+func DeleteAuth(givinUUID string) (int64, error) {
+	deleted, err := client.Del(givinUUID).Result()
+	if err != nil {
+		return 0, err
+	}
+	return deleted, nil
+}
+
+// Logout function logs out user duhhhhhhh
+func Logout(c *gin.Context) {
+	auth, err := ExtractTokenMetadata(c.Request)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	deleted, err := DeleteAuth(auth.AccessUUID)
+	if err != nil || deleted == 0 {
+		c.JSON(http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	c.JSON(http.StatusOK, "Successfully logged out")
+}
+
+// TokenAuthMiddleware protects routes from unauthorized access
+func TokenAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		err := TokenValid(c.Request)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, err.Error())
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }
